@@ -26,12 +26,16 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from threading import Lock
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
+from dotenv import load_dotenv
 from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from tqdm import tqdm
+
+# Load environment variables from .env file
+load_dotenv()
 
 from config import (
     OPENROUTER_BASE_URL,
@@ -168,6 +172,9 @@ def process_single_row(client: OpenAI, row: dict, idx: int) -> tuple[int, dict, 
         
         if "_parse_error" in enrichment:
             return (idx, {col: "" for col in ENRICHMENT_COLUMNS}, f"JSON parse error")
+        
+        # Add enriched_at timestamp (not from LLM)
+        enrichment['enriched_at'] = datetime.now(timezone.utc).isoformat()
         
         return (idx, enrichment, None)
         

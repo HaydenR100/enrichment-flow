@@ -3,3 +3,8 @@ __pycache__/
 *.pyc
 .DS_Store
 .env
+.cache/
+data/output/*
+!data/output/.gitkeep
+budget_registry/data/raw/*
+*.progress.json

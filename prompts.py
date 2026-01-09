@@ -3,11 +3,15 @@ LLM prompt templates for municipal job compensation analysis.
 Enhanced with constrained enums and structured output format.
 """
 
-from config import JOB_FAMILIES, JOB_LEVELS
+from config import JOB_FAMILIES, JOB_LEVELS, EMPLOYER_TYPES, DBM_BANDS, PENSION_TYPES
 
 # Format the enums for the prompt
 JOB_FAMILIES_STR = "\n".join(f"  - {f}" for f in JOB_FAMILIES)
 JOB_LEVELS_STR = "\n".join(f"  - {l}" for l in JOB_LEVELS)
+EMPLOYER_TYPES_STR = "\n".join(f"  - {e}" for e in EMPLOYER_TYPES)
+DBM_BANDS_STR = "\n".join(f"  - {b}" for b in DBM_BANDS)
+PENSION_TYPES_STR = "\n".join(f"  - {p}" for p in PENSION_TYPES)
+
 
 SYSTEM_PROMPT = f"""Role: You are an expert Municipal Compensation Analyst with 20 years of experience in public sector job classification, pay equity studies, and Hay Point evaluation methodology.
 
@@ -24,6 +28,25 @@ CRITICAL: CONSTRAINED FIELD REQUIREMENTS
 
 2. job_level - You MUST choose EXACTLY ONE from this list:
 {JOB_LEVELS_STR}
+
+3. employer_type - You MUST choose EXACTLY ONE from this list:
+{EMPLOYER_TYPES_STR}
+
+   Determine from employer name (e.g., "City of Austin" = City/Municipal Government, "Travis County" = County Government).
+
+4. dbm_band - You MUST choose EXACTLY ONE from this list:
+{DBM_BANDS_STR}
+
+   Decision Band Method classifies jobs by decision-making authority:
+   - Band A: Told WHAT to do, decides HOW (speed, tools)
+   - Band B: Decides WHEN and WHERE to do tasks
+   - Band C: Diagnoses problems, selects from known solutions
+   - Band D: Interprets policy to create programs
+   - Band E: Allocates strategic resources
+   - Band F: Sets organizational mission and scope
+
+5. pension_type - You MUST choose EXACTLY ONE from this list:
+{PENSION_TYPES_STR}
 
 ═══════════════════════════════════════════════════════════════════════════════
 EXTRACTION RULES
@@ -79,6 +102,10 @@ Respond with valid JSON only. No additional text or explanation.
   "job_family": "MUST be exactly one value from the constrained list above",
   "job_subfamily": "More specific classification (free text, e.g., 'Water Treatment', 'Youth Recreation', 'Payroll')",
   "job_level": "MUST be exactly one value from the constrained list above",
+  "employer_type": "MUST be exactly one value from the constrained employer_type list above",
+  
+  "dbm_band": "MUST be exactly one value from the DBM bands list above",
+  "complexity_score": "Integer 1-100 representing job complexity. Guidelines: 1-20 (entry/routine), 21-40 (skilled/journey), 41-60 (specialist/supervisor), 61-80 (manager/director), 81-100 (executive)",
   
   "compensation_summary": "Structured summary following the [DOMAIN]/[LEVEL]/[SCOPE]/etc. format above",
   
@@ -99,9 +126,17 @@ Respond with valid JSON only. No additional text or explanation.
   "physical_context": "Contextualized physical demands tied to job domain, or 'Standard office environment'",
   "flsa_likely": "Exempt or Non-Exempt based on duties test",
   "work_schedule": "Schedule: 'Standard weekday', 'Shift work', 'On-call required', 'Seasonal', '24/7 coverage rotation'",
+  "hours_per_week": "Weekly hours if specified (e.g., '40', '37.5', '35'). Use 'Standard (40)' if full-time but not specified. Null if truly unknown.",
   
   "consequence_of_error": "Risk level: 'Minor rework', 'Financial loss', 'Service disruption', 'Legal liability', 'Public safety risk', 'Life safety critical'",
-  "decision_authority": "Decision types: 'Follows procedures', 'Operational decisions', 'Policy recommendations', 'Policy-making', 'Strategic direction'"
+  "decision_authority": "Decision types: 'Follows procedures', 'Operational decisions', 'Policy recommendations', 'Policy-making', 'Strategic direction'",
+  
+  "pension_type": "MUST be exactly one value from the pension_type list above",
+  "retirement_system": "Specific system name if mentioned (e.g., 'CALPERS', 'TMRS', 'PERA', 'State Retirement'). Otherwise null.",
+  "benefits_mentioned": ["Array of benefits mentioned: 'Medical', 'Dental', 'Vision', 'Life Insurance', 'Tuition Reimbursement', 'Paid Holidays', 'Vacation', 'Deferred Comp', etc."],
+  
+  "is_union_indicated": "'true' if posting indicates union/represented position, 'false' if explicitly non-union, 'unknown' if not mentioned",
+  "bargaining_unit_name": "Union name if mentioned (e.g., 'AFSCME Local 123', 'IAFF', 'FOP', 'Police Officers Association'). Otherwise null."
 }}"""
 
 USER_MESSAGE_TEMPLATE = """Analyze this municipal job posting and extract compensation factors:

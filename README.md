@@ -1,126 +1,61 @@
-# Municipal Job Enrichment Pipeline
+# Job Enrichment Pipeline
 
-LLM-powered pipeline that enriches municipal job postings with structured compensation factors for vector-based job matching.
+A sophisticated, multi-layered pipeline for enriching municipal job postings with compensation-critical data points. Designed for precision in municipal and county compensation studies.
 
-## Features
+## 🚀 Overview
 
-- **21 structured columns** extracted from raw job descriptions
-- **Constrained enums** for job families (19) and levels (8)
-- **50+ parallel workers** for high-throughput processing
-- **Streaming writes** - each row saved immediately (crash-safe)
-- **Resume capability** - pick up exactly where you left off
-- **Price-optimized routing** via OpenRouter
+This pipeline transforms raw job postings into a rich dataset by applying four distinct layers of analysis:
 
-## Quick Start
+1.  **AI Extraction**: Leverages LLMs to extract structural data like DBM bands, complexity scores, pension types, and union indicators.
+2.  **Municipality Metadata**: Rule-based detection of employer types (City, County, etc.) and Census-verified lookup of population and median household income.
+3.  **Financial Context**: Direct integration with the 2023 Census Survey of Governments to retrieve verified "Total Expenditure" and "Per Capita" statistics.
+4.  **Statistical Processing**: Applies ECI (Employment Cost Index) aging adjustments and normalizes salaries to a standard 40-hour work week.
 
-```bash
-# 1. Install dependencies
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+## 📁 Project Structure
 
-# 2. Set API key
-export OPENROUTER_API_KEY='sk-or-v1-...'
-
-# 3. Run enrichment
-python enrich_jobs.py --input data/input/jobs.csv --output data/output/enriched.csv
+```text
+├── pipeline.py                 # Core orchestration script
+├── enrich_jobs.py              # LLM extraction layer
+├── enrich_employer.py          # Rule-based classification
+├── census_lookup.py            # Census Bureau API integration
+├── budget_lookup.py            # Census Finance database lookup
+├── statistical_processing.py    # ECI aging & salary normalization
+├── budget_registry/            # Source data for municipal/county budgets
+├── data/                       # Input/Output data directory
+└── docs/                       # Project methodology and documentation
 ```
 
-## Usage
+## 🛠️ Getting Started
 
-```bash
-# Basic enrichment
-python enrich_jobs.py -i input.csv -o output.csv
+1.  **Environment Setup**:
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+    ```
 
-# With 100 parallel workers
-python enrich_jobs.py -i input.csv -o output.csv --workers 100
+2.  **Configuration**:
+    Copy `.env.example` to `.env` and add your `OPENROUTER_API_KEY`. The Census integration uses ACS 5-year estimate public APIs.
 
-# Limit to first N rows (for testing)
-python enrich_jobs.py -i input.csv -o output.csv --limit 100
+3.  **Execution**:
+    ```bash
+    # Step 1: LLM Enrichment
+    python3 enrich_jobs.py -i data/input/your_jobs.csv -o data/output/llm_enriched.csv
 
-# Resume after crash/interrupt
-python enrich_jobs.py -i input.csv -o output.csv --resume
+    # Step 2: Full Pipeline (Census, Budget, Stats)
+    python3 pipeline.py -i data/output/llm_enriched.csv -o data/output/final_enriched.csv
+    ```
 
-# Dry run (no API calls)
-python enrich_jobs.py -i input.csv -o output.csv --dry-run
-```
+## 📊 Design Philosophy
 
-## Output Schema
+-   **Verified Data First**: We prioritize verified 2023 Census data over ML predictions for fiscal enrichment.
+-   **Apples-to-Apples Comparison**: By normalizing for hours, population, and budget, we enable valid salary comparisons across jurisdictions.
+-   **Transparency**: Every record includes a confidence score and details on the data source (e.g., "Census Survey of Governments").
 
-### Classification (for hybrid search filtering)
-| Column | Type | Description |
-|--------|------|-------------|
-| `job_family` | Enum (19) | Domain: "Public Works/Utilities/Infrastructure", "Finance/Budget/Accounting", etc. |
-| `job_subfamily` | String | Specialty: "Water Treatment", "Payroll", "Youth Recreation" |
-| `job_level` | Enum (8) | Authority: "Executive", "Director", "Manager", "Supervisor", "Individual Contributor", etc. |
+## ⚖️ Standards Compliance
 
-### Vector-Optimized Summary
-| Column | Description |
-|--------|-------------|
-| `compensation_summary` | Structured summary: `[DOMAIN]/[LEVEL]/[SCOPE]/[MANAGES]/[REQUIRES]/[CORE FUNCTION]/[DECIDES]/[RISK]` |
+This project implements the techniques defined in:
+-   *Comprehensive Methodology for Municipal Compensation Analysis*
+-   *Modernizing Municipal Compensation*
 
-### Quantitative Factors
-| Column | Description |
-|--------|-------------|
-| `fte_managed` | Headcount: "0", "1-5", "6-20", "21-50", "50+", "100+" |
-| `budget_authority` | Dollar amount: "$500K operational", "$5M capital" |
-| `scope_of_impact` | Reach: "Team", "Division", "Department", "City-wide", "Regional" |
-
-### Requirements
-| Column | Description |
-|--------|-------------|
-| `licenses_required` | JSON array: `["CDL Class A", "PE License"]` |
-| `certifications_required` | JSON array: `["CPA", "Water Treatment Grade 4"]` |
-| `education_minimum` | Level: "High School", "Associate", "Bachelor", "Master" |
-| `education_field` | Field: "Engineering", "Accounting", "Social Work" |
-| `years_experience` | Range: "0", "1-2", "3-5", "6-10", "10+" |
-| `specialized_systems` | JSON array: `["SCADA", "Munis", "GIS"]` |
-| `specialized_knowledge` | Domain expertise: "Municipal finance", "Water chemistry" |
-
-### Context
-| Column | Description |
-|--------|-------------|
-| `supervision_given` | Who they manage |
-| `supervision_received` | Who manages them |
-| `physical_context` | Contextualized physical demands |
-| `flsa_likely` | "Exempt" or "Non-Exempt" |
-| `work_schedule` | "Standard weekday", "Shift work", "On-call" |
-| `consequence_of_error` | Risk level of mistakes |
-| `decision_authority` | Types of decisions made |
-
-## Project Structure
-
-```
-Enrichment Flow/
-├── enrich_jobs.py      # Main pipeline script
-├── config.py           # Configuration (workers, model, enums)
-├── prompts.py          # LLM prompt templates
-├── requirements.txt    # Python dependencies
-├── data/
-│   ├── input/          # Source CSV files
-│   └── output/         # Enriched CSV files
-└── .agent/
-    └── workflows/      # Workflow documentation
-```
-
-## Crash Recovery
-
-If the process crashes or is interrupted:
-
-1. A progress file (`output.progress.json`) tracks exactly which rows are complete
-2. Run with `--resume` to continue from the exact row where it stopped
-3. Already-processed rows won't be re-processed or duplicated
-
-## Performance
-
-| Workers | Throughput | 10K rows |
-|---------|------------|----------|
-| 5 | ~1 row/sec | ~2.7 hours |
-| 20 | ~0.5 row/sec | ~5.5 hours |
-| 50 | ~0.3 row/sec | ~9 hours |
-
-*Note: Throughput depends on API rate limits and model response time.*
-
-## Model
-
-Uses `openai/gpt-oss-120b` via OpenRouter - a 120B parameter open-weight model optimized for structured extraction.
+Located in the `docs/` directory.
