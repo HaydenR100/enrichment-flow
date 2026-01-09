@@ -30,7 +30,7 @@ except ImportError:
 
 # Path modifications to find the neighboring project
 CURRENT_DIR = Path(__file__).parent
-BUDGET_PROJECT_DIR = CURRENT_DIR / "Budget Prediction Model"
+BUDGET_PROJECT_DIR = CURRENT_DIR / "budget_registry"
 DATA_PATH = BUDGET_PROJECT_DIR / "data" / "processed" / "municipal_budgets.csv"
 MODEL_PATH = BUDGET_PROJECT_DIR / "models" / "budget_predictor_gbm.pkl"
 
